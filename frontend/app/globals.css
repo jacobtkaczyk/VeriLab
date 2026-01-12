@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can keep your custom body styles below if you want, 
+   but Tailwind should handle most of it now */
+:root {
+  --background: #1e1e1e;
+  --foreground: #cbd5e1;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
