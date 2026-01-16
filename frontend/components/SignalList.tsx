@@ -1,47 +1,45 @@
-"use client";
-
 interface SignalListProps {
     signals: string[];
-    onToggleSignal: (signal: string) => void;
+    selectedSignals: string[]; // <--- Added this property
+    onToggleSignal: (sig: string) => void;
 }
 
-const SignalList = ({ signals, onToggleSignal }: SignalListProps) => {
+const SignalList = ({ signals, selectedSignals, onToggleSignal }: SignalListProps) => {
     return (
-        <div className="flex flex-col h-full bg-[#252526] overflow-hidden">
-            <div className="p-2 bg-[#333] border-b border-[#404040] flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-300 uppercase">Signals</span>
-                <span className="text-[10px] text-slate-500">{signals.length} found</span>
+        <div className="flex flex-col h-full">
+            <div className="px-3 py-2 text-xs font-bold text-slate-500 bg-[#252526] border-b border-[#404040]">
+                AVAILABLE SIGNALS
             </div>
-
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 {signals.length === 0 ? (
-                    <div className="text-center mt-4">
-                        <p className="text-slate-500 text-xs italic mb-2">No signals yet.</p>
-                        <p className="text-slate-600 text-[10px]">Select a testbench and click Run.</p>
+                    <div className="p-4 text-xs text-slate-600 text-center italic">
+                        No signals found.<br />Run simulation first.
                     </div>
                 ) : (
-                    signals.map((sig) => (
-                        <div key={sig} className="flex items-center space-x-2 mb-1 group">
-                            <input
-                                type="checkbox"
-                                id={sig}
-                                onChange={() => onToggleSignal(sig)}
-                                className="rounded-sm bg-[#3c3c3c] border-[#555] text-blue-600 focus:ring-0 cursor-pointer"
-                            />
-                            <label
-                                htmlFor={sig}
-                                className="text-sm text-slate-400 cursor-pointer select-none group-hover:text-slate-200 truncate"
-                                title={sig} // Tooltip for full path
+                    signals.map((sig) => {
+                        const isSelected = selectedSignals.includes(sig);
+                        return (
+                            <div
+                                key={sig}
+                                onClick={() => onToggleSignal(sig)}
+                                className={`
+                  px-3 py-1.5 text-xs font-mono cursor-pointer select-none flex items-center
+                  border-b border-[#2d2d2d] transition-colors
+                  ${isSelected
+                                        ? "bg-[#37373d] text-blue-400 border-l-2 border-l-blue-500"
+                                        : "text-slate-400 hover:bg-[#2a2d2e] border-l-2 border-l-transparent"}
+                `}
                             >
-                                {/* Visual trick: Make the hierarchy parts dimmer */}
-                                {sig.split('.').map((part, index, arr) => (
-                                    <span key={index} className={index === arr.length - 1 ? "text-slate-200 font-medium" : "text-slate-500"}>
-                                        {part}{index < arr.length - 1 && "."}
-                                    </span>
-                                ))}
-                            </label>
-                        </div>
-                    ))
+                                {/* Optional: Add a checkmark icon if selected */}
+                                <div className={`w-3 h-3 mr-2 rounded-sm border flex items-center justify-center ${isSelected ? "bg-blue-500 border-blue-500" : "border-slate-600"}`}>
+                                    {isSelected && (
+                                        <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path></svg>
+                                    )}
+                                </div>
+                                <span className="truncate" title={sig}>{sig}</span>
+                            </div>
+                        );
+                    })
                 )}
             </div>
         </div>

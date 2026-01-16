@@ -25,7 +25,7 @@ export default function Home() {
   const [availableSignals, setAvailableSignals] = useState<string[]>([]);
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
   const [waveforms, setWaveforms] = useState<Record<string, Waveform>>({});
-  const [simTime, setSimTime] = useState<number>(1000); // <--- NEW STATE
+  const [simTime, setSimTime] = useState<number>(1000); 
 
   const activeFile = files.find(f => f.path === activeFilePath);
 
@@ -101,22 +101,22 @@ export default function Home() {
     }
   };
 
-  // 7. Load Simulation
+  // 7. Load Simulation (UPDATED)
   const handleLoadSimulation = async () => {
     if (!selectedSimFile) {
       alert("Please select a testbench file first.");
       return;
     }
 
-    console.log(`Running simulation for ${simTime}ns...`);
+    // Optional: Add a loading state here if desired
 
     try {
       const payload = {
         testbench_name: selectedSimFile,
-        duration: simTime, // <--- SENDING DURATION
+        duration: simTime,
         files: files.map(f => ({
           name: f.name,
-          content: f.content
+          content: f.content // Sends saved content. Use f.draft if you want to run unsaved changes.
         }))
       };
 
@@ -130,16 +130,23 @@ export default function Home() {
 
       if (data.success) {
         setAvailableSignals(data.signals);
+        
         if (data.vcd) {
           const parsedWaves = parseVCD(data.vcd);
           setWaveforms(parsedWaves);
+          
+          // --- FIX START ---
+          // Instead of clearing signals, filter current selection against new available signals
+          // This keeps signals that still exist, and removes ones that were deleted from code
+          setSelectedSignals(prev => prev.filter(sig => data.signals.includes(sig)));
+          // --- FIX END ---
         }
-        setSelectedSignals([]);
       } else {
         alert("Simulation Error:\n" + data.error);
       }
 
     } catch (error) {
+      console.error(error);
       alert("Failed to connect to simulation server.");
     }
   };
@@ -165,8 +172,8 @@ export default function Home() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onRunSimulation={handleLoadSimulation}
-        simTime={simTime}        // <--- PASS STATE
-        setSimTime={setSimTime}  // <--- PASS SETTER
+        simTime={simTime}
+        setSimTime={setSimTime}
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -236,7 +243,11 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <SignalList signals={availableSignals} onToggleSignal={toggleSignal} />
+                  <SignalList 
+                    signals={availableSignals} 
+                    selectedSignals={selectedSignals} // Pass this if your SignalList supports showing selected state
+                    onToggleSignal={toggleSignal} 
+                  />
                 </div>
               </div>
 
