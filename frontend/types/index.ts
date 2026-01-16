@@ -1,5 +1,3 @@
-// frontend/types/index.ts
-
 export interface FileSystemHandle {
     kind: 'file' | 'directory';
     name: string;
@@ -7,25 +5,29 @@ export interface FileSystemHandle {
 
 export interface FileSystemFileHandle extends FileSystemHandle {
     kind: 'file';
-    getFile: () => Promise<File>;
-    createWritable: () => Promise<FileSystemWritableFileStream>;
+    getFile(): Promise<File>;
+    createWritable(): Promise<FileSystemWritableFileStream>;
+}
+
+export interface FileSystemWritableFileStream extends WritableStream {
+    write(data: string | BufferSource | Blob): Promise<void>;
+    seek(position: number): Promise<void>;
+    truncate(size: number): Promise<void>;
 }
 
 export interface FileSystemDirectoryHandle extends FileSystemHandle {
     kind: 'directory';
-    values: () => AsyncIterableIterator<FileSystemHandle>;
-}
-
-export interface FileSystemWritableFileStream extends WritableStream {
-    write: (data: string) => Promise<void>;
-    close: () => Promise<void>;
+    // These were missing:
+    getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandle>;
+    getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<FileSystemDirectoryHandle>;
+    values(): AsyncIterableIterator<FileSystemHandle>;
 }
 
 export interface ProjectFile {
     name: string;
-    path: string;       // Unique ID (e.g., "src/counter.v")
-    content: string;    // The saved content on disk
-    draft: string;      // The current content in the editor
-    isDirty: boolean;   // True if content !== draft
-    handle?: FileSystemFileHandle; // The reference needed to save back to disk
+    path: string;
+    content: string;
+    draft: string;
+    isDirty: boolean;
+    handle?: FileSystemFileHandle;
 }
