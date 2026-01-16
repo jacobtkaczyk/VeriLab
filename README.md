@@ -77,6 +77,13 @@ The backend API will be available at:
 
 http://localhost:8000
 
+### Terminal 2: Frontend Server
+
+```bash
+cd frontend
+npm run dev
+```
+
 The web interface will be available at:
 
 http://localhost:3000
