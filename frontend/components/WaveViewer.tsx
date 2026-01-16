@@ -8,7 +8,7 @@ interface WaveViewerProps {
     selectedSignals: string[];
 }
 
-// 1. Single Row Component (Optimized)
+// 1. Single Row Component (Unchanged logic, just receives dynamic timeScale)
 const SignalRow = ({
     waveform,
     width,
@@ -83,10 +83,16 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
 
     const [cursorTime, setCursorTime] = useState<number>(0);
     const [cursorX, setCursorX] = useState<number>(0);
+    
+    // --- NEW: Zoom State ---
+    const [timeScale, setTimeScale] = useState<number>(10);
 
     const ROW_HEIGHT = 40;
-    const TIME_SCALE = 10;
     const SIDEBAR_WIDTH = 200;
+
+    // --- NEW: Zoom Handlers ---
+    const handleZoomIn = () => setTimeScale(prev => Math.min(prev * 1.2, 20));
+    const handleZoomOut = () => setTimeScale(prev => Math.max(prev / 1.5, 1));  // Min zoom
 
     const getMaxTime = () => {
         let max = 100;
@@ -100,7 +106,8 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
     };
 
     const simulationDuration = getMaxTime();
-    const contentWidth = Math.max(800, simulationDuration * TIME_SCALE + 100);
+    // Dynamic content width based on timeScale
+    const contentWidth = Math.max(800, simulationDuration * timeScale + 100);
 
     const updateCursor = (e: React.MouseEvent) => {
         if (!scrollContainerRef.current || selectedSignals.length === 0) return;
@@ -111,8 +118,9 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
         let x = e.clientX - rect.left + scrollLeft - SIDEBAR_WIDTH;
         x = Math.max(0, Math.min(x, contentWidth));
 
-        const time = Math.floor(x / TIME_SCALE);
-        const snappedX = time * TIME_SCALE;
+        // Use dynamic timeScale for calculation
+        const time = Math.floor(x / timeScale);
+        const snappedX = time * timeScale;
 
         setCursorX(snappedX);
         setCursorTime(time);
@@ -127,6 +135,11 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
             updateCursor(e);
         }
     };
+
+    // Keep cursor position synced when zooming
+    useEffect(() => {
+        setCursorX(cursorTime * timeScale);
+    }, [timeScale, cursorTime]);
 
     const getValue = (sig: string) => {
         const wave = waveforms[sig];
@@ -147,15 +160,39 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
     return (
         <div className="flex flex-col h-full bg-[#1e1e1e] text-slate-300 select-none overflow-hidden">
 
-            {/* 1. Header (Time Ruler) */}
-            <div className="flex border-b border-[#404040] bg-[#252526] h-8 shrink-0">
-                <div className="w-[200px] border-r border-[#404040] shrink-0 flex items-center px-4 text-xs font-bold text-slate-500">
-                    SIGNALS
+            {/* 1. Header (Time Ruler & Controls) */}
+            <div className="flex border-b border-[#404040] bg-[#252526] h-10 shrink-0 items-center">
+                <div className="w-[200px] border-r border-[#404040] shrink-0 flex items-center justify-between px-3 text-xs font-bold text-slate-500 h-full">
+                    <span>SIGNALS</span>
+                    
+                    {/* ZOOM CONTROLS */}
+                    <div className="flex space-x-1">
+                        <button 
+                            onClick={handleZoomOut}
+                            className="p-1 hover:bg-[#3c3c3c] rounded text-slate-400 hover:text-white"
+                            title="Zoom Out"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                            </svg>
+                        </button>
+                        <button 
+                            onClick={handleZoomIn}
+                            className="p-1 hover:bg-[#3c3c3c] rounded text-slate-400 hover:text-white"
+                            title="Zoom In"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div className="flex-1 overflow-hidden relative">
+
+                <div className="flex-1 overflow-hidden relative flex items-center px-4">
                     {selectedSignals.length > 0 && (
-                        <div className="text-[10px] text-slate-500 flex items-center h-full pl-2">
-                            Cursor Time: <span className="text-white ml-2 font-mono">{cursorTime}ns</span>
+                        <div className="text-xs text-slate-400 flex items-center gap-4">
+                            <span>Cursor: <span className="text-white font-mono">{cursorTime}ns</span></span>
+                            <span>Scale: <span className="text-white font-mono">{Math.round(timeScale * 10) / 10} px/ns</span></span>
                         </div>
                     )}
                 </div>
@@ -232,7 +269,7 @@ const WaveViewer = ({ waveforms, selectedSignals }: WaveViewerProps) => {
                                         waveform={waveforms[sig]}
                                         width={contentWidth}
                                         height={ROW_HEIGHT}
-                                        timeScale={TIME_SCALE}
+                                        timeScale={timeScale}
                                     />
                                 </div>
                             </div>
