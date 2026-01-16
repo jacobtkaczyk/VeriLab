@@ -25,7 +25,11 @@ export default function Home() {
   const [availableSignals, setAvailableSignals] = useState<string[]>([]);
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
   const [waveforms, setWaveforms] = useState<Record<string, Waveform>>({});
-  const [simTime, setSimTime] = useState<number>(1000); 
+  const [simTime, setSimTime] = useState<number>(1000);
+  
+  // --- NEW: Lifted Wave Viewer State ---
+  const [cursorTime, setCursorTime] = useState<number>(0); 
+  const [markers, setMarkers] = useState<number[]>([]);   
 
   const activeFile = files.find(f => f.path === activeFilePath);
 
@@ -101,14 +105,61 @@ export default function Home() {
     }
   };
 
-  // 7. Load Simulation (UPDATED)
+  // --- 8. MOVED: Feature Handlers (Now accessible to Navbar) ---
+  
+  const handleAddMarker = () => {
+    if (!markers.includes(cursorTime)) {
+      setMarkers(prev => [...prev, cursorTime].sort((a, b) => a - b));
+    }
+  };
+
+  const handleClearMarkers = () => {
+    setMarkers([]);
+  };
+
+  const handleNextEdge = () => {
+    if (selectedSignals.length === 0) return;
+    let nextTime = Infinity;
+
+    selectedSignals.forEach(sig => {
+      const wave = waveforms[sig];
+      if (!wave) return;
+      const nextPoint = wave.data.find(p => p.time > cursorTime);
+      if (nextPoint && nextPoint.time < nextTime) {
+        nextTime = nextPoint.time;
+      }
+    });
+
+    if (nextTime !== Infinity) setCursorTime(nextTime);
+  };
+
+  const handlePrevEdge = () => {
+    if (selectedSignals.length === 0) return;
+    let prevTime = -1;
+
+    selectedSignals.forEach(sig => {
+      const wave = waveforms[sig];
+      if (!wave) return;
+      
+      for (let i = wave.data.length - 1; i >= 0; i--) {
+        if (wave.data[i].time < cursorTime) {
+          if (wave.data[i].time > prevTime) {
+            prevTime = wave.data[i].time;
+          }
+          break;
+        }
+      }
+    });
+
+    if (prevTime !== -1) setCursorTime(prevTime);
+  };
+
+  // 7. Load Simulation
   const handleLoadSimulation = async () => {
     if (!selectedSimFile) {
       alert("Please select a testbench file first.");
       return;
     }
-
-    // Optional: Add a loading state here if desired
 
     try {
       const payload = {
@@ -116,7 +167,7 @@ export default function Home() {
         duration: simTime,
         files: files.map(f => ({
           name: f.name,
-          content: f.content // Sends saved content. Use f.draft if you want to run unsaved changes.
+          content: f.content
         }))
       };
 
@@ -130,16 +181,10 @@ export default function Home() {
 
       if (data.success) {
         setAvailableSignals(data.signals);
-        
         if (data.vcd) {
           const parsedWaves = parseVCD(data.vcd);
           setWaveforms(parsedWaves);
-          
-          // --- FIX START ---
-          // Instead of clearing signals, filter current selection against new available signals
-          // This keeps signals that still exist, and removes ones that were deleted from code
           setSelectedSignals(prev => prev.filter(sig => data.signals.includes(sig)));
-          // --- FIX END ---
         }
       } else {
         alert("Simulation Error:\n" + data.error);
@@ -174,6 +219,11 @@ export default function Home() {
         onRunSimulation={handleLoadSimulation}
         simTime={simTime}
         setSimTime={setSimTime}
+        // --- ADDED: Pass the handlers to Navbar ---
+        onAddMarker={handleAddMarker}
+        onClearMarkers={handleClearMarkers}
+        onNextEdge={handleNextEdge}
+        onPrevEdge={handlePrevEdge}
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -243,16 +293,22 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <SignalList 
-                    signals={availableSignals} 
-                    selectedSignals={selectedSignals} // Pass this if your SignalList supports showing selected state
-                    onToggleSignal={toggleSignal} 
+                  <SignalList
+                    signals={availableSignals}
+                    selectedSignals={selectedSignals}
+                    onToggleSignal={toggleSignal}
                   />
                 </div>
               </div>
 
               <div className="flex-1 overflow-hidden relative">
-                <WaveViewer waveforms={waveforms} selectedSignals={selectedSignals} />
+                <WaveViewer 
+                    waveforms={waveforms} 
+                    selectedSignals={selectedSignals} 
+                    cursorTime={cursorTime}
+                    setCursorTime={setCursorTime}
+                    markers={markers}
+                />
               </div>
             </div>
           )}
